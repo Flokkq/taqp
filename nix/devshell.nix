@@ -11,6 +11,8 @@ pkgs.mkShell {
   shellHook = ''
     unset NIX_CFLAGS_COMPILE
     unset NIX_LDFLAGS
-    export ESP_IDF_TOOLS_PATH=$HOME/.espressif
+
+    export IDF_PATH=$(pwd)/esp-idf
+    export PATH=$IDF_PATH/tools:$PATH
   '';
 }
