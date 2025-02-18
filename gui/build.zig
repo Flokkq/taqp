@@ -5,8 +5,8 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     // Create our Mach app module, where all our code lives.
-    const app_mod = b.createModule(.{
-        .root_source_file = b.path("src/App.zig"),
+    const taqp_mod = b.createModule(.{
+        .root_source_file = b.path("src/taqp.zig"),
         .optimize = optimize,
         .target = target,
     });
@@ -16,6 +16,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+
     const zig_imgui_dep = b.dependency("zig_imgui", .{ .target = target, .optimize = optimize });
 
     const imgui_module = b.addModule("zig-imgui", .{
@@ -24,19 +25,21 @@ pub fn build(b: *std.Build) void {
             .{ .name = "mach", .module = mach_dep.module("mach") },
         },
     });
-    app_mod.addImport("mach", mach_dep.module("mach"));
-    app_mod.addImport("zig-imgui", imgui_module);
+
+    taqp_mod.addImport("mach", mach_dep.module("mach"));
+    taqp_mod.addImport("zig-imgui", imgui_module);
 
     // Have Mach create the executable for us
     const exe = @import("mach").addExecutable(mach_dep.builder, .{
         .name = "taqp-gui",
-        .app = app_mod,
+        .app = taqp_mod,
         .target = target,
         .optimize = optimize,
     });
     b.installArtifact(exe);
 
     exe.linkLibrary(zig_imgui_dep.artifact("imgui"));
+
     // Run the app when `zig build run` is invoked
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
@@ -48,7 +51,7 @@ pub fn build(b: *std.Build) void {
 
     // Run tests when `zig build test` is run
     const app_unit_tests = b.addTest(.{
-        .root_module = app_mod,
+        .root_module = taqp_mod,
     });
     const run_app_unit_tests = b.addRunArtifact(app_unit_tests);
     const test_step = b.step("test", "Run unit tests");

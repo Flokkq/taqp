@@ -7,13 +7,10 @@ const gpu = mach.gpu;
 const imgui = @import("zig-imgui");
 const imgui_mach = imgui.backends.mach;
 
+const taqp = @import("taqp.zig");
+
 const App = @This();
 const Core = mach.Core;
-
-pub const Modules = mach.Modules(.{
-    mach.Core,
-    App,
-});
 
 // The set of Mach modules our application may use.
 pub const mach_module = .app;
@@ -28,8 +25,6 @@ pub const main = mach.schedule(.{
 allocator: std.mem.Allocator = undefined,
 window: mach.ObjectID,
 timer: mach.time.Timer,
-pipeline_compute: *gpu.ComputePipeline = undefined,
-pipeline_default: *gpu.RenderPipeline = undefined,
 
 var gpa: std.heap.GeneralPurposeAllocator(.{}) = .init;
 
@@ -38,8 +33,11 @@ pub fn init(
     app: *App,
     app_mod: mach.Mod(App),
 ) !void {
-    core.on_tick = app_mod.id.tick;
-    core.on_exit = app_mod.id.deinit;
+    taqp.app = app;
+    taqp.core = core;
+
+    taqp.core.on_tick = app_mod.id.tick;
+    taqp.core.on_exit = app_mod.id.deinit;
 
     const allocator = if (builtin.mode == .Debug) gpa.allocator() else std.heap.c_allocator;
 
@@ -58,7 +56,7 @@ pub fn init(
 /// This is called from the event fired when the window is done being
 /// initialized by the platform
 pub fn lateInit(app: *App, core: *Core) !void {
-    const window = core.windows.getValue(app.window);
+    const window = taqp.core.windows.getValue(app.window);
 
     imgui.setZigAllocator(&app.allocator);
     _ = imgui.createContext(null);
@@ -83,7 +81,7 @@ pub fn tick(app: *App, core: *mach.Core, app_mod: mach.Mod(App)) !void {
         }
     }
 
-    const window = core.windows.getValue(app.window);
+    var window = core.windows.getValue(app.window);
 
     // New imgui frame
     try imgui_mach.newFrame();
@@ -134,13 +132,12 @@ pub fn tick(app: *App, core: *mach.Core, app_mod: mach.Mod(App)) !void {
 }
 
 pub fn deinit(app: *App) void {
-    app.pipeline_default.release();
-    app.pipeline_compute.release();
-
     imgui_mach.shutdown();
     imgui.getIO().fonts.?.clear();
     imgui.destroyContext(null);
 
     _ = gpa.detectLeaks();
     _ = gpa.deinit();
+
+    _ = app;
 }
