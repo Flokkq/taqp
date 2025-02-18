@@ -1,90 +1,82 @@
 const std = @import("std");
+const builtin = @import("builtin");
+
 const mach = @import("mach");
 const gpu = mach.gpu;
 
+const imgui = @import("zig-imgui");
+const imgui_mach = imgui.backends.mach;
+
 const App = @This();
-// The set of Mach modules our application may use.
+const Core = mach.Core;
+
 pub const Modules = mach.Modules(.{
     mach.Core,
     App,
 });
 
+// The set of Mach modules our application may use.
 pub const mach_module = .app;
-
-pub const mach_systems = .{ .main, .init, .tick, .deinit };
+pub const mach_systems = .{ .main, .init, .lateInit, .tick, .deinit };
 
 pub const main = mach.schedule(.{
-    .{ mach.Core, .init },
+    .{ Core, .init },
     .{ App, .init },
-    .{ mach.Core, .main },
+    .{ Core, .main },
 });
 
+allocator: std.mem.Allocator = undefined,
 window: mach.ObjectID,
-title_timer: mach.time.Timer,
-pipeline: *gpu.RenderPipeline,
+timer: mach.time.Timer,
+pipeline_compute: *gpu.ComputePipeline = undefined,
+pipeline_default: *gpu.RenderPipeline = undefined,
+
+var gpa: std.heap.GeneralPurposeAllocator(.{}) = .init;
 
 pub fn init(
-    core: *mach.Core,
+    core: *Core,
     app: *App,
     app_mod: mach.Mod(App),
 ) !void {
     core.on_tick = app_mod.id.tick;
     core.on_exit = app_mod.id.deinit;
 
+    const allocator = if (builtin.mode == .Debug) gpa.allocator() else std.heap.c_allocator;
+
     const window = try core.windows.new(.{
-        .title = "core-triangle",
+        .title = "taqp",
     });
 
     // Store our render pipeline in our module's state, so we can access it later on.
     app.* = .{
+        .allocator = allocator,
         .window = window,
-        .title_timer = try mach.time.Timer.start(),
-        .pipeline = undefined,
+        .timer = try mach.time.Timer.start(),
     };
 }
 
-fn setupPipeline(core: *mach.Core, app: *App, window_id: mach.ObjectID) !void {
-    var window = core.windows.getValue(window_id);
-    defer core.windows.setValueRaw(window_id, window);
+/// This is called from the event fired when the window is done being
+/// initialized by the platform
+pub fn lateInit(app: *App, core: *Core) !void {
+    const window = core.windows.getValue(app.window);
 
-    // Create our shader module
-    const shader_module = window.device.createShaderModuleWGSL("shader.wgsl", @embedFile("shader.wgsl"));
-    defer shader_module.release();
-
-    // Blend state describes how rendered colors get blended
-    const blend = gpu.BlendState{};
-
-    // Color target describes e.g. the pixel format of the window we are rendering to.
-    const color_target = gpu.ColorTargetState{
-        .format = window.framebuffer_format,
-        .blend = &blend,
-    };
-
-    // Fragment state describes which shader and entrypoint to use for rendering fragments.
-    const fragment = gpu.FragmentState.init(.{
-        .module = shader_module,
-        .entry_point = "frag_main",
-        .targets = &.{color_target},
+    imgui.setZigAllocator(&app.allocator);
+    _ = imgui.createContext(null);
+    try imgui_mach.init(core, app.allocator, window.device, .{
+        .mag_filter = .nearest,
+        .min_filter = .nearest,
+        .mipmap_filter = .nearest,
+        .color_format = window.framebuffer_format,
     });
-
-    // Create our render pipeline that will ultimately get pixels onto the screen.
-    const label = @tagName(mach_module) ++ ".init";
-    const pipeline_descriptor = gpu.RenderPipeline.Descriptor{
-        .label = label,
-        .fragment = &fragment,
-        .vertex = gpu.VertexState{
-            .module = shader_module,
-            .entry_point = "vertex_main",
-        },
-    };
-    app.pipeline = window.device.createRenderPipeline(&pipeline_descriptor);
 }
 
-pub fn tick(app: *App, core: *mach.Core) void {
+pub fn tick(app: *App, core: *mach.Core, app_mod: mach.Mod(App)) !void {
+    const label = @tagName(mach_module) ++ ".tick";
+
     while (core.nextEvent()) |event| {
         switch (event) {
-            .window_open => |ev| {
-                try setupPipeline(core, app, ev.window_id);
+            .window_open => {
+                app_mod.call(.lateInit);
             },
             .close => core.exit(),
             else => {},
@@ -93,43 +85,62 @@ pub fn tick(app: *App, core: *mach.Core) void {
 
     const window = core.windows.getValue(app.window);
 
-    // Grab the back buffer of the swapchain
-    const back_buffer_view = window.swap_chain.getCurrentTextureView().?;
-    defer back_buffer_view.release();
+    // New imgui frame
+    try imgui_mach.newFrame();
+    imgui.newFrame();
 
-    // Create a command encoder
-    const label = @tagName(mach_module) ++ ".tick";
+    // Render imgui
+    imgui.render();
 
-    const encoder = window.device.createCommandEncoder(&.{ .label = label });
-    defer encoder.release();
+    if (window.swap_chain.getCurrentTextureView()) |back_buffer_view| {
+        defer back_buffer_view.release();
 
-    // Begin render pass
-    const sky_blue_background = gpu.Color{ .r = 0.776, .g = 0.988, .b = 1, .a = 1 };
-    const color_attachments = [_]gpu.RenderPassColorAttachment{.{
-        .view = back_buffer_view,
-        .clear_value = sky_blue_background,
-        .load_op = .clear,
-        .store_op = .store,
-    }};
-    const render_pass = encoder.beginRenderPass(&gpu.RenderPassDescriptor.init(.{
-        .label = label,
-        .color_attachments = &color_attachments,
-    }));
-    defer render_pass.release();
+        const imgui_commands = commands: {
+            const encoder = window.device.createCommandEncoder(&.{ .label = label });
+            defer encoder.release();
 
-    // Draw
-    render_pass.setPipeline(app.pipeline);
-    render_pass.draw(3, 1, 0, 0);
+            const background: gpu.Color = .{
+                .r = 1.0,
+                .g = 0.5,
+                .b = 0.5,
+                .a = 1.0,
+            };
 
-    // Finish render pass
-    render_pass.end();
+            // Gui pass.
+            {
+                const color_attachment = gpu.RenderPassColorAttachment{
+                    .view = back_buffer_view,
+                    .clear_value = background,
+                    .load_op = .clear,
+                    .store_op = .store,
+                };
 
-    // Submit our commands to the queue
-    var command = encoder.finish(&.{ .label = label });
-    defer command.release();
-    window.queue.submit(&[_]*gpu.CommandBuffer{command});
+                const render_pass_info = gpu.RenderPassDescriptor.init(.{
+                    .color_attachments = &.{color_attachment},
+                });
+                const pass = encoder.beginRenderPass(&render_pass_info);
+
+                imgui_mach.renderDrawData(imgui.getDrawData().?, pass) catch {};
+                pass.end();
+                pass.release();
+            }
+
+            break :commands encoder.finish(&.{ .label = label });
+        };
+        defer imgui_commands.release();
+
+        window.queue.submit(&.{imgui_commands});
+    }
 }
 
 pub fn deinit(app: *App) void {
-    app.pipeline.release();
+    app.pipeline_default.release();
+    app.pipeline_compute.release();
+
+    imgui_mach.shutdown();
+    imgui.getIO().fonts.?.clear();
+    imgui.destroyContext(null);
+
+    _ = gpa.detectLeaks();
+    _ = gpa.deinit();
 }

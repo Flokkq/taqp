@@ -27,6 +27,10 @@
             .url = "https://pkg.machengine.org/mach/b14f8e69ee8eb834695eb0d0582053e555d10156.tar.gz",
             .hash = "12208832468a607cf5da2e724b4386dd41c433b08e98b1ef28302f0f981e96045c1d",
         },
+        .zig_imgui = .{
+            .url = "https://github.com/foxnne/zig-imgui/archive/5aafd039bddc3345e2035016d43a45b8d846b7a2.tar.gz",
+            .hash = "1220034e62c3bf2572bb37a3e15d137c835aa578bc3102d4e64ca463bfe655d7321a",
+        },
     },
     .paths = .{
         "build.zig",

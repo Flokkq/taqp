@@ -16,7 +16,16 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    const zig_imgui_dep = b.dependency("zig_imgui", .{ .target = target, .optimize = optimize });
+
+    const imgui_module = b.addModule("zig-imgui", .{
+        .root_source_file = zig_imgui_dep.path("src/imgui.zig"),
+        .imports = &.{
+            .{ .name = "mach", .module = mach_dep.module("mach") },
+        },
+    });
     app_mod.addImport("mach", mach_dep.module("mach"));
+    app_mod.addImport("zig-imgui", imgui_module);
 
     // Have Mach create the executable for us
     const exe = @import("mach").addExecutable(mach_dep.builder, .{
@@ -27,6 +36,7 @@ pub fn build(b: *std.Build) void {
     });
     b.installArtifact(exe);
 
+    exe.linkLibrary(zig_imgui_dep.artifact("imgui"));
     // Run the app when `zig build run` is invoked
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
