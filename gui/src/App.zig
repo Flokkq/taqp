@@ -81,6 +81,37 @@ pub fn lateInit(app: *App, core: *Core) !void {
         .mipmap_filter = .nearest,
         .color_format = window.framebuffer_format,
     });
+
+    // Load fonts
+    var io = imgui.getIO();
+    io.config_flags |= imgui.ConfigFlags_NavEnableKeyboard;
+    io.display_framebuffer_scale = .{ .x = app.content_scale[0], .y = app.content_scale[1] };
+    io.font_global_scale = 1.0;
+
+    var cozette_config: imgui.FontConfig = std.mem.zeroes(imgui.FontConfig);
+    cozette_config.font_data_owned_by_atlas = true;
+    cozette_config.oversample_h = 2;
+    cozette_config.oversample_v = 1;
+    cozette_config.glyph_max_advance_x = std.math.floatMax(f32);
+    cozette_config.rasterizer_multiply = 1.0;
+    cozette_config.rasterizer_density = 1.0;
+    cozette_config.ellipsis_char = imgui.UNICODE_CODEPOINT_MAX;
+
+    _ = io.fonts.?.addFontFromFileTTF(taqp.paths.@"CozetteVector.ttf", 13.0, &cozette_config, null);
+
+    var fa_config: imgui.FontConfig = std.mem.zeroes(imgui.FontConfig);
+    fa_config.merge_mode = true;
+    fa_config.font_data_owned_by_atlas = true;
+    fa_config.oversample_h = 2;
+    fa_config.oversample_v = 1;
+    fa_config.glyph_max_advance_x = std.math.floatMax(f32);
+    fa_config.rasterizer_multiply = 1.0;
+    fa_config.rasterizer_density = 1.0;
+    fa_config.ellipsis_char = imgui.UNICODE_CODEPOINT_MAX;
+    const ranges: []const u16 = &.{ 0xf000, 0xf976, 0 };
+
+    _ = io.fonts.?.addFontFromFileTTF(taqp.paths.@"fa-solid-900.ttf", 13.0, &fa_config, @ptrCast(ranges.ptr)).?;
+    _ = io.fonts.?.addFontFromFileTTF(taqp.paths.@"fa-regular-400.ttf", 13.0, &fa_config, @ptrCast(ranges.ptr)).?;
 }
 
 pub fn tick(app: *App, core: *mach.Core, app_mod: mach.Mod(App), editor_mod: mach.Mod(Editor)) !void {

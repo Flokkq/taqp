@@ -8,6 +8,9 @@ pub const version: std.SemanticVersion = .{
     .patch = 0,
 };
 
+// Generated files, these contain helpers for autocomplete
+pub const paths = @import("generated/fonts.zig");
+
 pub const App = @import("App.zig");
 pub const Editor = @import("editor/Editor.zig");
 pub const Sidebar = @import("editor/Sidebar.zig");

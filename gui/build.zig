@@ -1,6 +1,10 @@
 const std = @import("std");
 
-pub fn build(b: *std.Build) void {
+const content_dir = "assets/";
+
+const ProcessFontsStep = @import("src/tools/process_assets.zig");
+
+pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
@@ -40,6 +44,18 @@ pub fn build(b: *std.Build) void {
 
     exe.linkLibrary(zig_imgui_dep.artifact("imgui"));
 
+    const fonts = try ProcessFontsStep.init(b, "assets", "src/generated/");
+    var process_fonts_step = b.step("process-assets", "generates struct for all assets");
+    process_fonts_step.dependOn(&fonts.step);
+    exe.step.dependOn(process_fonts_step);
+
+    const install_content_step = b.addInstallDirectory(.{
+        .source_dir = .{ .cwd_relative = thisDir() ++ "/" ++ content_dir },
+        .install_dir = .{ .custom = "" },
+        .install_subdir = "bin/" ++ content_dir,
+    });
+    exe.step.dependOn(&install_content_step.step);
+
     // Run the app when `zig build run` is invoked
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
@@ -56,4 +72,8 @@ pub fn build(b: *std.Build) void {
     const run_app_unit_tests = b.addRunArtifact(app_unit_tests);
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_app_unit_tests.step);
+}
+
+inline fn thisDir() []const u8 {
+    return comptime std.fs.path.dirname(@src().file) orelse ".";
 }
