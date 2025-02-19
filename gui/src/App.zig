@@ -25,6 +25,9 @@ pub const main = mach.schedule(.{
 allocator: std.mem.Allocator = undefined,
 window: mach.ObjectID,
 timer: mach.time.Timer,
+window_size: [2]f32 = undefined,
+framebuffer_size: [2]f32 = undefined,
+content_scale: [2]f32 = undefined,
 
 var gpa: std.heap.GeneralPurposeAllocator(.{}) = .init;
 
@@ -58,6 +61,13 @@ pub fn init(
 pub fn lateInit(app: *App, core: *Core) !void {
     const window = taqp.core.windows.getValue(app.window);
 
+    app.window_size = .{ @floatFromInt(window.width), @floatFromInt(window.height) };
+    app.framebuffer_size = .{ @floatFromInt(window.framebuffer_width), @floatFromInt(window.framebuffer_height) };
+    app.content_scale = .{
+        app.framebuffer_size[0] / app.window_size[0],
+        app.framebuffer_size[1] / app.window_size[1],
+    };
+
     imgui.setZigAllocator(&app.allocator);
     _ = imgui.createContext(null);
     try imgui_mach.init(core, app.allocator, window.device, .{
@@ -75,6 +85,15 @@ pub fn tick(app: *App, core: *mach.Core, app_mod: mach.Mod(App)) !void {
         switch (event) {
             .window_open => {
                 app_mod.call(.lateInit);
+            },
+            .window_resize => |resize| {
+                const window = core.windows.getValue(app.window);
+                app.window_size = .{ @floatFromInt(resize.size.width), @floatFromInt(resize.size.height) };
+                app.framebuffer_size = .{ @floatFromInt(window.framebuffer_width), @floatFromInt(window.framebuffer_height) };
+                app.content_scale = .{
+                    app.framebuffer_size[0] / app.window_size[0],
+                    app.framebuffer_size[1] / app.window_size[1],
+                };
             },
             .close => core.exit(),
             else => {},
