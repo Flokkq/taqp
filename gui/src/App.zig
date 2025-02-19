@@ -10,6 +10,7 @@ const imgui_mach = imgui.backends.mach;
 const taqp = @import("taqp.zig");
 
 const App = @This();
+const Editor = taqp.Editor;
 const Core = mach.Core;
 
 // The set of Mach modules our application may use.
@@ -19,6 +20,7 @@ pub const mach_systems = .{ .main, .init, .lateInit, .tick, .deinit };
 pub const main = mach.schedule(.{
     .{ Core, .init },
     .{ App, .init },
+    .{ Editor, .init },
     .{ Core, .main },
 });
 
@@ -28,16 +30,19 @@ timer: mach.time.Timer,
 window_size: [2]f32 = undefined,
 framebuffer_size: [2]f32 = undefined,
 content_scale: [2]f32 = undefined,
+should_close: bool = false,
 
 var gpa: std.heap.GeneralPurposeAllocator(.{}) = .init;
 
 pub fn init(
     core: *Core,
     app: *App,
+    editor: *Editor,
     app_mod: mach.Mod(App),
 ) !void {
     taqp.app = app;
     taqp.core = core;
+    taqp.editor = editor;
 
     taqp.core.on_tick = app_mod.id.tick;
     taqp.core.on_exit = app_mod.id.deinit;
@@ -78,7 +83,7 @@ pub fn lateInit(app: *App, core: *Core) !void {
     });
 }
 
-pub fn tick(app: *App, core: *mach.Core, app_mod: mach.Mod(App)) !void {
+pub fn tick(app: *App, core: *mach.Core, app_mod: mach.Mod(App), editor_mod: mach.Mod(Editor)) !void {
     const label = @tagName(mach_module) ++ ".tick";
 
     while (core.nextEvent()) |event| {
@@ -95,8 +100,16 @@ pub fn tick(app: *App, core: *mach.Core, app_mod: mach.Mod(App)) !void {
                     app.framebuffer_size[1] / app.window_size[1],
                 };
             },
-            .close => core.exit(),
+            .close => {
+                editor_mod.call(.close);
+            },
             else => {},
+        }
+
+        if (!app.should_close) {
+            if (imgui.getCurrentContext() != null) {
+                _ = imgui_mach.processEvent(event);
+            }
         }
     }
 
@@ -105,6 +118,8 @@ pub fn tick(app: *App, core: *mach.Core, app_mod: mach.Mod(App)) !void {
     // New imgui frame
     try imgui_mach.newFrame();
     imgui.newFrame();
+
+    editor_mod.call(.tick);
 
     // Render imgui
     imgui.render();
@@ -117,9 +132,9 @@ pub fn tick(app: *App, core: *mach.Core, app_mod: mach.Mod(App)) !void {
             defer encoder.release();
 
             const background: gpu.Color = .{
-                .r = 1.0,
-                .g = 0.5,
-                .b = 0.5,
+                .r = @as(f32, @floatFromInt(34)) / 255.0,
+                .g = @as(f32, @floatFromInt(35)) / 255.0,
+                .b = @as(f32, @floatFromInt(42)) / 255.0,
                 .a = 1.0,
             };
 
@@ -147,10 +162,16 @@ pub fn tick(app: *App, core: *mach.Core, app_mod: mach.Mod(App)) !void {
         defer imgui_commands.release();
 
         window.queue.submit(&.{imgui_commands});
+
+        if (app.should_close) {
+            core.exit();
+        }
     }
 }
 
-pub fn deinit(app: *App) void {
+pub fn deinit(app: *App, editor_mod: mach.Mod(Editor)) void {
+    editor_mod.call(.deinit);
+
     imgui_mach.shutdown();
     imgui.getIO().fonts.?.clear();
     imgui.destroyContext(null);
