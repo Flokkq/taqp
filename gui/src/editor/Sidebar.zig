@@ -11,6 +11,11 @@ pub const Sidebar = @This();
 pub const mach_module = .sidebar;
 pub const mach_systems = .{ .init, .deinit, .draw };
 
+pub const Pane = enum(u32) {
+    overview,
+    edit,
+};
+
 pub fn init(sidebar: *Sidebar) void {
     sidebar.* = .{};
 }
@@ -72,14 +77,14 @@ pub fn draw(app: *App, editor: *Editor) !void {
         });
         defer imgui.popStyleColorEx(2);
 
-        drawOption("\u{f07c}");
+        drawOption(.overview, "\u{f07c}", editor);
+        drawOption(.edit, "\u{f303}", editor);
     }
-    _ = editor;
 
     imgui.end();
 }
 
-fn drawOption(icon: [:0]const u8) void {
+fn drawOption(option: Pane, icon: [:0]const u8, editor: *Editor) void {
     const position = imgui.getCursorPos();
     const selectable_width = (50 - 8);
     const selectable_height = (50 - 8);
@@ -90,8 +95,14 @@ fn drawOption(icon: [:0]const u8) void {
     });
 
     imgui.setCursorPos(position);
-
-    if (imgui.isItemHovered(imgui.HoveredFlags_None)) {
+    if (editor.pane == option) {
+        imgui.pushStyleColorImVec4(imgui.Col_Text, .{
+            .x = @as(f32, @floatFromInt(47)) / 255,
+            .y = @as(f32, @floatFromInt(179)) / 255,
+            .z = @as(f32, @floatFromInt(123)) / 255,
+            .w = @as(f32, @floatFromInt(255)) / 255,
+        });
+    } else if (imgui.isItemHovered(imgui.HoveredFlags_None)) {
         imgui.pushStyleColorImVec4(imgui.Col_Text, .{
             .x = @as(f32, @floatFromInt(230)) / 255,
             .y = @as(f32, @floatFromInt(175)) / 255,
@@ -108,7 +119,8 @@ fn drawOption(icon: [:0]const u8) void {
     }
 
     const selectable_flags: imgui.SelectableFlags = imgui.SelectableFlags_DontClosePopups;
-    _ = imgui.selectableEx(icon, true, selectable_flags, .{ .x = selectable_width, .y = selectable_height });
-
+    if (imgui.selectableEx(icon, editor.pane == option, selectable_flags, .{ .x = selectable_width, .y = selectable_height })) {
+        editor.pane = option;
+    }
     imgui.popStyleColor();
 }

@@ -6,6 +6,7 @@ const taqp = @import("../taqp.zig");
 const App = taqp.App;
 const Core = mach.Core;
 const Sidebar = taqp.Sidebar;
+const Pane = taqp.Sidebar.Pane;
 const Editor = @This();
 
 const imgui = @import("zig-imgui");
@@ -15,6 +16,7 @@ pub const mach_systems = .{ .init, .tick, .close, .deinit };
 
 arena: std.heap.ArenaAllocator,
 sidebar: *Sidebar,
+pane: Pane = .overview,
 
 pub fn init(app: *App, editor: *Editor, _sidebar: *Sidebar, sidebar_mod: mach.Mod(Sidebar)) !void {
     _ = app;
