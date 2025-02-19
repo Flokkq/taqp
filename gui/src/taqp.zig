@@ -10,12 +10,14 @@ pub const version: std.SemanticVersion = .{
 
 pub const App = @import("App.zig");
 pub const Editor = @import("editor/Editor.zig");
+pub const Sidebar = @import("editor/Sidebar.zig");
 
 // The set of Mach modules our application may use.
 pub const Modules = mach.Modules(.{
     mach.Core,
     App,
     Editor,
+    Sidebar,
 });
 
 // Global pointers
