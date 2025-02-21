@@ -13,6 +13,7 @@ pub const paths = @import("generated/fonts.zig");
 
 pub const App = @import("App.zig");
 pub const Editor = @import("editor/Editor.zig");
+pub const Schema = @import("editor/schema/Schema.zig");
 pub const Sidebar = @import("editor/Sidebar.zig");
 
 // The set of Mach modules our application may use.
@@ -21,6 +22,7 @@ pub const Modules = mach.Modules(.{
     App,
     Editor,
     Sidebar,
+    Schema,
 });
 
 // Global pointers
