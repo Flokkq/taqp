@@ -6,7 +6,7 @@ const darwin = @cImport({
     @cInclude("AudioToolbox/AudioToolbox.h");
 });
 
-const OsError = @import("error.zig").OsError;
+const OsError = @import("../error.zig").OsError;
 
 pub fn increase_volume() OsError!void {
     change_volume(0.1) catch |err| return err;
@@ -14,6 +14,10 @@ pub fn increase_volume() OsError!void {
 
 pub fn decrease_volume() OsError!void {
     change_volume(-0.1) catch |err| return err;
+}
+
+pub fn mute_volumne() OsError!void {
+    change_volume(-1.0) catch |err| return err;
 }
 
 fn change_volume(d: f32) !void {
