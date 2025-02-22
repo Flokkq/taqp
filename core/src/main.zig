@@ -14,15 +14,15 @@ const OsError = @import("actions/os/error.zig").OsError;
 pub fn main() !void {
     std.debug.print("Lets try this out\n\n", .{});
 
-    os.volumne.increase_volume() catch |err| switch (err) {
+    os.volumne.increaseVolume() catch |err| switch (err) {
         OsError.VolumeChangeError => std.debug.print("Failed to increase volume\n", .{}),
     };
 
-    os.volumne.decrease_volume() catch |err| switch (err) {
+    os.volumne.decreaseVolume() catch |err| switch (err) {
         OsError.VolumeChangeError => std.debug.print("Failed to decrease volume\n", .{}),
     };
 
-    os.volumne.mute_volumne() catch |err| switch (err) {
+    os.volumne.muteVolumne() catch |err| switch (err) {
         OsError.VolumeChangeError => std.debug.print("Failed to mute volume\n", .{}),
     };
 }

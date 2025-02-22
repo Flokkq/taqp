@@ -8,19 +8,19 @@ const darwin = @cImport({
 
 const OsError = @import("../error.zig").OsError;
 
-pub fn increase_volume() OsError!void {
-    change_volume(0.1) catch |err| return err;
+pub fn increaseVolume() OsError!void {
+    changeVolume(0.1) catch |err| return err;
 }
 
-pub fn decrease_volume() OsError!void {
-    change_volume(-0.1) catch |err| return err;
+pub fn decreaseVolume() OsError!void {
+    changeVolume(-0.1) catch |err| return err;
 }
 
-pub fn mute_volumne() OsError!void {
-    change_volume(-1.0) catch |err| return err;
+pub fn muteVolumne() OsError!void {
+    changeVolume(-1.0) catch |err| return err;
 }
 
-fn change_volume(d: f32) !void {
+fn changeVolume(d: f32) !void {
     var device_id: darwin.AudioObjectID = 0;
     var prosperity_address = darwin.AudioObjectPropertyAddress{
         .mSelector = darwin.kAudioHardwarePropertyDefaultOutputDevice,
