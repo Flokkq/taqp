@@ -9,20 +9,22 @@ const os =
     else => @compileError("Unsupported OS"),
 };
 
-const OsError = @import("actions/os/error.zig").OsError;
-
 pub fn main() !void {
     std.debug.print("Lets try this out\n\n", .{});
 
-    os.volumne.increaseVolume() catch |err| switch (err) {
-        OsError.VolumeChangeError => std.debug.print("Failed to increase volume\n", .{}),
-    };
+    const a: os.Action = .MuteVolumne;
 
-    os.volumne.decreaseVolume() catch |err| switch (err) {
-        OsError.VolumeChangeError => std.debug.print("Failed to decrease volume\n", .{}),
-    };
+    switch (a) {
+        .IncreaseVolumne => os.volumne.increaseVolume() catch |err| switch (err) {
+            os.Error.VolumeChangeError => std.debug.print("Failed to increase volume\n", .{}),
+        },
 
-    os.volumne.muteVolumne() catch |err| switch (err) {
-        OsError.VolumeChangeError => std.debug.print("Failed to mute volume\n", .{}),
-    };
+        .DecreaseVolumne => os.volumne.decreaseVolume() catch |err| switch (err) {
+            os.Error.VolumeChangeError => std.debug.print("Failed to decrease volume\n", .{}),
+        },
+
+        .MuteVolumne => os.volumne.muteVolumne() catch |err| switch (err) {
+            os.Error.VolumeChangeError => std.debug.print("Failed to mute volume\n", .{}),
+        },
+    }
 }
