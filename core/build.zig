@@ -1,7 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-fn link_darwin_dependencies(exe: *std.Build.Step.Compile) void {
+fn linkDarwinDependencies(exe: *std.Build.Step.Compile) void {
     exe.linkFramework("CoreAudio");
     exe.linkFramework("AudioToolbox");
 }
@@ -19,7 +19,7 @@ pub fn build(b: *std.Build) void {
     });
 
     switch (builtin.os.tag) {
-        .macos => link_darwin_dependencies(exe),
+        .macos => linkDarwinDependencies(exe),
         .linux, .openbsd, .freebsd => {},
         .windows => {},
         else => @compileError("Unsupported OS"),

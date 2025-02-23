@@ -6,17 +6,17 @@ const darwin = @cImport({
     @cInclude("AudioToolbox/AudioToolbox.h");
 });
 
-const OsError = @import("../error.zig").OsError;
+const ActionError = @import("../../action.zig").ActionError;
 
-pub fn increaseVolume() OsError!void {
+pub fn increaseVolume() ActionError!void {
     changeVolume(0.1) catch |err| return err;
 }
 
-pub fn decreaseVolume() OsError!void {
+pub fn decreaseVolume() ActionError!void {
     changeVolume(-0.1) catch |err| return err;
 }
 
-pub fn muteVolumne() OsError!void {
+pub fn muteVolumne() ActionError!void {
     changeVolume(-1.0) catch |err| return err;
 }
 
@@ -39,7 +39,7 @@ fn changeVolume(d: f32) !void {
     );
 
     // TODO: provide error status mapping errors
-    if (status != 0 or device_id == 0) return OsError.VolumeChangeError;
+    if (status != 0 or device_id == 0) return ActionError.VolumeChangeError;
 
     prosperity_address.mSelector = darwin.kAudioHardwareServiceDeviceProperty_VirtualMasterVolume;
     prosperity_address.mScope = darwin.kAudioDevicePropertyScopeOutput;
@@ -56,11 +56,11 @@ fn changeVolume(d: f32) !void {
         &volume,
     );
 
-    if (status != 0) return OsError.VolumeChangeError;
+    if (status != 0) return ActionError.VolumeChangeError;
 
     volume = std.math.clamp(volume + d, 0.0, 1.0);
 
     status = darwin.AudioObjectSetPropertyData(device_id, &prosperity_address, 0, null, prosperity_size, &volume);
 
-    if (status != 0) return OsError.VolumeChangeError;
+    if (status != 0) return ActionError.VolumeChangeError;
 }
