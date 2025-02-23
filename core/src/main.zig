@@ -1,30 +1,21 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const net = std.net;
 
-const os =
-    switch (builtin.os.tag) {
-    .windows => @import("actions/os/windows/windows.zig"),
-    .macos => @import("actions/os/darwin/darwin.zig"),
-    .linux, .freebsd, .openbsd => @import("actions/os/posix/posix.zig"),
-    else => @compileError("Unsupported OS"),
-};
+const ipc = @import("ipc.zig");
 
 pub fn main() !void {
-    std.debug.print("Lets try this out\n\n", .{});
+    const addr = net.Address.initIp4(.{ 127, 0, 0, 1 }, 18769);
+    var server = try addr.listen(.{});
 
-    const a: os.Action = .MuteVolumne;
+    std.log.info("listening at {}\n", .{server.listen_address});
 
-    switch (a) {
-        .IncreaseVolumne => os.volumne.increaseVolume() catch |err| switch (err) {
-            os.Error.VolumeChangeError => std.debug.print("Failed to increase volume\n", .{}),
-        },
+    while (true) {
+        const connection = try server.accept();
+        std.log.info("connected to {}\n", .{connection.address});
 
-        .DecreaseVolumne => os.volumne.decreaseVolume() catch |err| switch (err) {
-            os.Error.VolumeChangeError => std.debug.print("Failed to decrease volume\n", .{}),
-        },
-
-        .MuteVolumne => os.volumne.muteVolumne() catch |err| switch (err) {
-            os.Error.VolumeChangeError => std.debug.print("Failed to mute volume\n", .{}),
-        },
+        ipc.handleClient(connection.stream) catch |err| {
+            std.log.err("Error processing connection: {}\n", .{err});
+        };
     }
 }
