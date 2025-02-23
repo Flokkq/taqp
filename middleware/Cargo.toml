@@ -13,3 +13,5 @@ debug = 0
 debug = 0
 
 [dependencies]
+rusb = "0.9.4"
+serde = "1.0.218"

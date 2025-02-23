@@ -14,13 +14,21 @@
     flake-utils.lib.eachDefaultSystem (system: let
       pkgs = import nixpkgs {inherit system;};
 
-      esp = import ./nix/esp {inherit pkgs;};
+      # esp = import ./nix/esp {inherit pkgs;};
       rust = import ./nix/rust.nix {inherit pkgs;};
       zig = import ./nix/zig.nix {inherit pkgs;};
       common = import ./nix/common.nix {inherit pkgs;};
     in {
       devShells.default = import ./nix/devshell.nix {
-        inherit pkgs esp rust zig common;
+        inherit
+          pkgs
+          /*
+          esp
+          */
+          rust
+          zig
+          common
+          ;
       };
     });
 }

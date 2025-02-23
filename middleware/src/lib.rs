@@ -1,15 +1,24 @@
+mod usb;
+
+/// reexports
+use std::ptr;
+use usb::UsbDevice;
+
 #[no_mangle]
-pub extern "C" fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+pub extern "C" fn load_usb_devices(count: *mut usize) -> *mut UsbDevice {
+    match usb::load_usb_devices() {
+        Ok(devices) => {
+            unsafe { *count = devices.len() };
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+            let mut boxed_slice = devices.into_boxed_slice();
+            let ptr = boxed_slice.as_mut_ptr();
+            std::mem::forget(boxed_slice);
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+            ptr
+        }
+        Err(_) => {
+            unsafe { *count = 0 };
+            ptr::null_mut()
+        }
     }
 }
