@@ -3,19 +3,29 @@ const builtin = @import("builtin");
 const net = std.net;
 
 const ipc = @import("ipc.zig");
+const usb = @import("usb.zig");
 
 pub fn main() !void {
     const addr = net.Address.initIp4(.{ 127, 0, 0, 1 }, 18769);
     var server = try addr.listen(.{});
 
-    std.log.info("listening at {}\n", .{server.listen_address});
+    std.log.info("listening at {}", .{server.listen_address});
+
+    const vendor_id: u16 = 0x1a86;
+    const product_id: u16 = 0x7523;
+    const device = usb.connectToDevice(vendor_id, product_id) catch |err| {
+        std.log.err("Failed connecting to taqp device: {}", .{err});
+        return;
+    };
+
+    std.log.info("Found taqp device: {?}", .{device});
 
     while (true) {
         const connection = try server.accept();
         std.log.info("connected to {}\n", .{connection.address});
 
         ipc.handleClient(connection.stream) catch |err| {
-            std.log.err("Error processing connection: {}\n", .{err});
+            std.log.err("Error processing connection: {}", .{err});
         };
     }
 }
