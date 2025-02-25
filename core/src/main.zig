@@ -26,6 +26,13 @@ pub fn main() !void {
         return;
     };
 
+    const message = usb.readFromDevice(device) catch |err| {
+        std.log.err("Failed reading data from device: {}", .{err});
+        return;
+    };
+
+    std.log.info("Recieved message from device: {}", .{message.tag});
+
     while (true) {
         const connection = try server.accept();
         std.log.info("connected to {}\n", .{connection.address});

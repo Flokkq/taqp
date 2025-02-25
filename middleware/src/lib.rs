@@ -6,7 +6,7 @@ mod usb;
 /// reexports
 use std::ptr as std_ptr;
 
-use bindings::Action;
+use bindings::{Action, WireMessage};
 use rusb::Context;
 use usb::UsbDevice;
 
@@ -35,5 +35,23 @@ pub extern "C" fn send_to_device(device: *mut UsbDevice, action: u8) -> i32 {
 		Ok(_) => 0,
 		// TODO: proper error handlling
 		Err(_) => -3,
+	}
+}
+
+#[no_mangle]
+pub extern "C" fn read_from_device(device: *mut UsbDevice) -> *mut WireMessage {
+	let device = match ptr::deref_ptr_mut(device) {
+		Ok(d) => d,
+		Err(_) => return std_ptr::null_mut(),
+	};
+
+	match device.recieve() {
+		Ok(message) => {
+			let wire_message = WireMessage::from(message);
+			let boxed = Box::new(wire_message);
+
+			Box::into_raw(boxed)
+		}
+		Err(_) => std_ptr::null_mut(),
 	}
 }
