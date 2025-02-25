@@ -21,11 +21,11 @@ pub fn build(b: *std.Build) !void {
 
     const rust_lib = try setupMiddleware(b, optimize);
     exe.addLibraryPath(rust_lib.dirname());
-    exe.linkSystemLibrary("middleware");
+    exe.linkSystemLibrary("bridge");
 
-    const bindings_path = b.path("../middleware/src/bindings.zig");
+    const bindings_path = b.path("../bridge/src/bindings.zig");
     const bindings_module = b.addModule("bindings", .{ .root_source_file = bindings_path });
-    exe.addIncludePath(b.path("../middleware/src"));
+    exe.addIncludePath(b.path("../bridge/src"));
     exe.root_module.addImport("bindings", bindings_module);
 
     b.installArtifact(exe);
@@ -57,8 +57,8 @@ fn linkDarwinDependencies(exe: *std.Build.Step.Compile) void {
 }
 
 fn setupMiddleware(b: *std.Build, opt: std.builtin.OptimizeMode) !std.Build.LazyPath {
-    const base_path = b.path("../middleware");
-    const lib_name = "libmiddleware";
+    const base_path = b.path("../bridge");
+    const lib_name = "libbridge";
 
     const tool_run = b.addSystemCommand(&.{"cargo"});
     tool_run.setCwd(base_path);

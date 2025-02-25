@@ -1,5 +1,5 @@
 [package]
-name = "middleware"
+name = "bridge"
 version = "0.1.0"
 edition = "2021"
 
