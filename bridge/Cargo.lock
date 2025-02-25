@@ -12,15 +12,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bridge"
-version = "0.1.0"
-dependencies = [
- "bincode",
- "rusb",
- "serde",
-]
-
-[[package]]
 name = "cc"
 version = "1.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -116,6 +107,15 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
+]
+
+[[package]]
+name = "taqp-bridge"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "rusb",
+ "serde",
 ]
 
 [[package]]

@@ -41,10 +41,11 @@
           mv $out/zig $out/bin/zig
         '';
       };
+      zls = pkgs.zls;
     in {
       packages.default = zig_mach;
       devShells.default = pkgs.mkShell {
-        buildInputs = [zig_mach];
+        buildInputs = [zig_mach zls];
         shellHook = ''
           export PATH="$PATH:${zig_mach}/bin"
           echo "Using Mach's Zig: $(zig version)"

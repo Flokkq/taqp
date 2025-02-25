@@ -35,7 +35,7 @@ pub fn build(b: *std.Build) !void {
 
     // Have Mach create the executable for us
     const exe = @import("mach").addExecutable(mach_dep.builder, .{
-        .name = "taqp-gui",
+        .name = "taqp-desktop",
         .app = taqp_mod,
         .target = target,
         .optimize = optimize,
