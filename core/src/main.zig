@@ -4,7 +4,6 @@ const net = std.net;
 
 const ipc = @import("ipc.zig");
 const usb = @import("usb.zig");
-const middleware = @import("middleware.zig");
 
 pub fn main() !void {
     const addr = net.Address.initIp4(.{ 127, 0, 0, 1 }, 18769);

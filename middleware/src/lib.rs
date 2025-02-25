@@ -6,9 +6,9 @@ mod usb;
 /// reexports
 use std::ptr as std_ptr;
 
-use bindings::{Action, WireMessage};
+use crate::bindings::WireMessage;
 use rusb::Context;
-use usb::UsbDevice;
+use usb::{Action, UsbDevice};
 
 #[no_mangle]
 pub extern "C" fn connect(vendor_id: u16, product_id: u16) -> *mut UsbDevice {

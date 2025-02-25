@@ -23,6 +23,11 @@ pub fn build(b: *std.Build) !void {
     exe.addLibraryPath(rust_lib.dirname());
     exe.linkSystemLibrary("middleware");
 
+    const bindings_path = b.path("../middleware/src/bindings.zig");
+    const bindings_module = b.addModule("bindings", .{ .root_source_file = bindings_path });
+    exe.addIncludePath(b.path("../middleware/src"));
+    exe.root_module.addImport("bindings", bindings_module);
+
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);

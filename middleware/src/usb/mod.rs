@@ -1,4 +1,4 @@
 mod device;
 mod endpoint;
 
-pub use device::UsbDevice;
+pub use device::{Action, Message, TaqpConfig, UsbDevice};
