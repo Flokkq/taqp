@@ -43,7 +43,7 @@ TAGS.*
 
 # Before adding new lines, see the comment at the top.
 
-/src/rust/target
+target/
 /target
 .zig-cache/
 zig-out/
