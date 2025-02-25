@@ -11,9 +11,9 @@ pub fn execute(action: Action) ActionError!void {
 }
 
 pub const Action = enum(u8) {
-    MuteVolume = 0,
-    IncreaseVolume = 1,
-    DecreaseVolume = 2,
+    MuteVolume,
+    IncreaseVolume,
+    DecreaseVolume,
 
     pub fn from_int(val: u8) ?Action {
         return std.meta.intToEnum(@This(), val) catch null;

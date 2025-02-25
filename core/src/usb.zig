@@ -4,25 +4,12 @@ const net = std.net;
 const mem = std.mem;
 
 const middleware = @import("middleware.zig");
+const Action = @import("action/action.zig").Action;
 
-pub const UsbError = error{DeviceNotFound};
+pub const UsbError = error{ DeviceNotFound, SendFailure };
 
-pub fn connectToDevice(vendor_id: u16, product_id: u16) UsbError!middleware.UsbDevice {
-    var count: usize = 0;
-    const devices = middleware.load_usb_devices(&count);
-
-    if (devices == null or count == 0) {
-        std.log.warn("No USB devices found.", .{});
-        return UsbError.DeviceNotFound;
-    }
-
-    var device: ?middleware.UsbDevice = null;
-    for (devices.?[0..count]) |raw_device| {
-        if (raw_device.vendor_id == vendor_id and raw_device.product_id == product_id) {
-            device = raw_device;
-            break;
-        }
-    }
+pub fn connectToDevice(vendor_id: u16, product_id: u16) UsbError!*middleware.UsbDevice {
+    const device = middleware.connect(vendor_id, product_id);
 
     if (device == null) {
         std.log.warn("taqp device not found in device list", .{});
@@ -30,4 +17,16 @@ pub fn connectToDevice(vendor_id: u16, product_id: u16) UsbError!middleware.UsbD
     }
 
     return device.?;
+}
+
+pub fn sendToDevice(device: *middleware.UsbDevice, action: Action) UsbError!void {
+    const action_byte: u8 = @intFromEnum(action);
+    const result = middleware.send_to_device(device, action_byte);
+
+    if (result < 0) {
+        std.log.err("Failed sending data to device", .{});
+        return UsbError.SendFailure;
+    }
+
+    return;
 }

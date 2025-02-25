@@ -1,28 +1,39 @@
+mod bindings;
+mod ffi;
 mod ptr;
 mod usb;
 
 /// reexports
-use usb::UsbDevice;
 use std::ptr as std_ptr;
 
+use bindings::Action;
+use rusb::Context;
+use usb::UsbDevice;
+
 #[no_mangle]
-pub extern "C" fn load_usb_devices(count: *mut usize) -> *mut UsbDevice {
-	match usb::load_usb_devices() {
-		Ok(devices) => {
-			if let Err(_) = ptr::set_ptr(count, devices.len()) {
-				return std_ptr::null_mut();
-			}
+pub extern "C" fn connect(vendor_id: u16, product_id: u16) -> *mut UsbDevice {
+	let mut context = match Context::new() {
+		Ok(c) => c,
+		Err(_) => return std_ptr::null_mut(),
+	};
 
-			let mut boxed_slice = devices.into_boxed_slice();
-			let ptr = boxed_slice.as_mut_ptr();
-			std::mem::forget(boxed_slice);
-
-			ptr
+	match UsbDevice::connect(&mut context, vendor_id, product_id) {
+		Ok(device) => {
+			let boxed = Box::new(device);
+			Box::into_raw(boxed)
 		}
-		Err(_) => {
-			let _ = ptr::set_ptr(count, 0);
-			std_ptr::null_mut()
-		}
+		Err(_) => std_ptr::null_mut(),
 	}
 }
 
+#[no_mangle]
+pub extern "C" fn send_to_device(device: *mut UsbDevice, action: u8) -> i32 {
+	let device = try_unwrap!(ptr::deref_ptr_mut(device));
+	let action: Action = try_unwrap!(action.try_into());
+
+	match device.send_action(action) {
+		Ok(_) => 0,
+		// TODO: proper error handlling
+		Err(_) => -3,
+	}
+}
