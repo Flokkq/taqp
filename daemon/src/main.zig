@@ -18,7 +18,10 @@ pub fn main() !void {
     const thread = try std.Thread.spawn(.{}, struct {
         pub fn run(device: *bindings.UsbDevice) !void {
             while (true) {
-                const message = usb.readFromDevice(device);
+                const message = usb.readFromDevice(device) catch |err| {
+                    std.log.err("Error reading from device: {}", .{err});
+                    continue;
+                };
 
                 std.log.info("Recieved message from device: {any}", .{message});
             }
@@ -32,7 +35,11 @@ pub fn main() !void {
     std.log.info("listening at {}", .{server.listen_address});
 
     while (true) {
-        const connection = try server.accept();
+        const connection = server.accept() catch |err| {
+            std.log.err("Error reading from socket: {}", .{err});
+            continue;
+        };
+
         std.log.info("connected to {}\n", .{connection.address});
 
         ipc.handleClient(connection.stream) catch |err| {
