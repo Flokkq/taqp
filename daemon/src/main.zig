@@ -1,6 +1,8 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const action = @import("action/action.zig");
 const net = std.net;
+const mem = std.mem;
 
 const ipc = @import("ipc.zig");
 const usb = @import("usb.zig");
@@ -9,11 +11,12 @@ const bindings = @import("bindings");
 pub fn main() !void {
     const vendor_id: u16 = 0x10c4;
     const product_id: u16 = 0xea60;
+
     const usb_device = usb.connectToDevice(vendor_id, product_id) catch |err| {
         std.log.err("Failed connecting to taqp device: {}", .{err});
         return;
     };
-    std.log.info("Found taqp device: {?}", .{usb_device});
+    std.log.info("Found taqp device: {d}-{d}", .{ vendor_id, product_id });
 
     const thread = try std.Thread.spawn(.{}, struct {
         pub fn run(device: *bindings.UsbDevice) !void {
@@ -24,6 +27,10 @@ pub fn main() !void {
                 };
 
                 std.log.info("Recieved message from device: {any}", .{message});
+
+                usb.handleClient(message) catch |err| {
+                    std.log.err("Error processing message: {}", .{err});
+                };
             }
         }
     }.run, .{usb_device});

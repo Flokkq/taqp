@@ -1,5 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const action = @import("action/action.zig");
 const net = std.net;
 const mem = std.mem;
 
@@ -11,6 +12,8 @@ pub const UsbError = error{
     SendFailure,
     ReadFailure,
     ConnectionLost,
+    InvalidInput,
+    ActionError,
 };
 
 pub fn connectToDevice(vendor_id: u16, product_id: u16) UsbError!*bindings.UsbDevice {
@@ -22,16 +25,16 @@ pub fn connectToDevice(vendor_id: u16, product_id: u16) UsbError!*bindings.UsbDe
     return device;
 }
 
-pub fn sendToDevice(device: *bindings.UsbDevice, action: Action) UsbError!void {
-    const action_byte: u8 = @intFromEnum(action);
+pub fn sendToDevice(device: *bindings.UsbDevice, axn: Action) UsbError!void {
+    const action_byte: u8 = @intFromEnum(axn);
     const result = bindings.send_to_device(device, action_byte);
 
     if (result < 0) {
-        std.log.err("Failed sending action to device: ", .{action});
+        std.log.err("Failed sending action to device: ", .{axn});
         return UsbError.SendFailure;
     }
 
-    std.log.info("Sent action {} to device successfully", .{action});
+    std.log.info("Sent action {} to device successfully", .{axn});
 }
 
 pub fn readFromDevice(device: *bindings.UsbDevice) UsbError!*bindings.WireMessage {
@@ -41,4 +44,23 @@ pub fn readFromDevice(device: *bindings.UsbDevice) UsbError!*bindings.WireMessag
     };
 
     return message;
+}
+
+pub fn handleClient(message: *bindings.WireMessage) UsbError!void {
+    if (message.tag != bindings.MESSAGE_TAG_EXECUTE_ACTION) {
+        std.log.warn("Recieved invalid message tag: {}", .{message.tag});
+        return UsbError.InvalidInput;
+    }
+
+    // TODO: add `len` attribute to wiremessage
+    const action_value: u8 = mem.readInt(u8, message.data[0..1], .big);
+    const axn = action.Action.from_int(action_value) orelse {
+        std.log.err("Invalid action value: {d}", .{action_value});
+        return UsbError.InvalidInput;
+    };
+
+    action.execute(axn) catch |err| {
+        std.log.err("Error executing action: {}", .{err});
+        return UsbError.ActionError;
+    };
 }
