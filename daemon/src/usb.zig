@@ -29,12 +29,16 @@ fn bridgeErrorToUsbError(err: bindings.BridgeError) UsbError {
 }
 
 pub fn connectToDevice(vendor_id: u16, product_id: u16) UsbError!*bindings.UsbDevice {
-    const device = bindings.connect(vendor_id, product_id) orelse {
-        std.log.warn("taqp device not found in device list", .{});
-        return UsbError.DeviceNotFound;
-    };
+    var device: ?*bindings.UsbDevice = null;
+    const result = bindings.connect(vendor_id, product_id, &device);
 
-    return device;
+    if (result < 0) {
+        const err = bridgeErrorToUsbError(result);
+        std.log.err("Failed to connect to device: error code {}", .{err});
+        return err;
+    }
+
+    return device.?;
 }
 
 pub fn sendToDevice(device: *bindings.UsbDevice, axn: Action) UsbError!void {
@@ -42,20 +46,25 @@ pub fn sendToDevice(device: *bindings.UsbDevice, axn: Action) UsbError!void {
     const result = bindings.send_to_device(device, action_byte);
 
     if (result < 0) {
-        std.log.err("Failed sending action to device: ", .{axn});
-        return bridgeErrorToUsbError(result);
+        const err = bridgeErrorToUsbError(result);
+        std.log.err("Failed sending action '{}' to device: {}", .{ axn, err });
+        return err;
     }
 
     std.log.info("Sent action {} to device successfully", .{axn});
 }
 
 pub fn readFromDevice(device: *bindings.UsbDevice) UsbError!*bindings.WireMessage {
-    const message = bindings.read_from_device(device) orelse {
-        std.log.warn("Failed reading data from device", .{});
-        return UsbError.ReadFailure;
-    };
+    var message: ?*bindings.WireMessage = null;
+    const result: bindings.BridgeError = bindings.read_from_device(device, &message);
 
-    return message;
+    if (result < 0) {
+        const err = bridgeErrorToUsbError(result);
+        std.log.warn("Failed reading data from device: {}", .{err});
+        return err;
+    }
+
+    return message.?;
 }
 
 pub fn handleClient(message: *bindings.WireMessage) UsbError!void {

@@ -1,6 +1,6 @@
-pub extern fn connect(vendor_id: u16, product_id: u16) ?*UsbDevice;
-pub extern fn send_to_device(device: *UsbDevice, action: u8) BridgeError;
-pub extern fn read_from_device(device: *UsbDevice) ?*WireMessage;
+pub extern fn connect(vendor_id: u16, product_id: u16, out_device: *?*UsbDevice) i32;
+pub extern fn send_to_device(device: *UsbDevice, action: u8) i32;
+pub extern fn read_from_device(device: *UsbDevice, out_message: *?*WireMessage) i32;
 
 pub const UsbDevice = extern struct {
     vendor_id: u16,
