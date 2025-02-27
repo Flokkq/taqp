@@ -5,9 +5,9 @@
 
 ## The plan...
 + [ ] setup
-+ [ ] talk to rust from zig
-+ [ ] talk to esp from zig
-+ [ ] connect to device from esp
++ [x] talk to rust from zig
++ [x] talk to esp from zig
++ [x] connect to esp from device
 + [ ] react to physical button press
-+ [ ] send data to the gui application running on the device
++ [ ] send data to the daemon running on the device
 + [ ] load config from the gui application
