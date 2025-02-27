@@ -1,8 +1,10 @@
 use rusb::{Context, DeviceHandle, UsbContext};
 
-use crate::ptr;
-
 use super::endpoint::Endpoint;
+use crate::{
+	error::{BridgeError, Result},
+	ptr,
+};
 
 #[repr(C)]
 #[derive(Debug)]
@@ -28,8 +30,8 @@ impl UsbDevice {
 		context: &mut T,
 		vid: u16,
 		pid: u16,
-	) -> Result<UsbDevice, rusb::Error> {
-		let devices = context.devices()?;
+	) -> Result<UsbDevice> {
+		let devices = context.devices().map_err(|_| BridgeError::Connection)?;
 
 		for mut device in devices.iter() {
 			let device_desc = match device.device_descriptor() {
@@ -46,7 +48,7 @@ impl UsbDevice {
 					rusb::Direction::In,
 				) {
 					Some(e) => e,
-					None => return Err(rusb::Error::Other),
+					None => return Err(BridgeError::Connection),
 				};
 
 				let endpoint_out = match Endpoint::find_readable(
@@ -56,13 +58,19 @@ impl UsbDevice {
 					rusb::Direction::Out,
 				) {
 					Some(e) => e,
-					None => return Err(rusb::Error::Other),
+					None => return Err(BridgeError::Connection),
 				};
 
-				let mut handle = device.open()?;
+				let mut handle =
+					device.open().map_err(|_| BridgeError::Connection)?;
 
-				endpoint_in.configure(&mut handle)?;
-				endpoint_out.configure(&mut handle)?;
+				endpoint_in
+					.configure(&mut handle)
+					.map_err(|_| BridgeError::Connection)?;
+
+				endpoint_out
+					.configure(&mut handle)
+					.map_err(|_| BridgeError::Connection)?;
 
 				let handle_boxed = Box::new(handle);
 				let handle_ptr =
@@ -77,50 +85,51 @@ impl UsbDevice {
 				});
 			}
 
-			return Err(rusb::Error::NotFound);
+			return Err(BridgeError::Connection);
 		}
 
-		return Err(rusb::Error::NotFound);
+		return Err(BridgeError::Connection);
 	}
 
-	fn send<T: serde::Serialize>(&self, data: T) -> Result<(), rusb::Error> {
+	fn send<T: serde::Serialize>(&self, data: T) -> Result<()> {
 		let serialized =
-			bincode::serialize(&data).map_err(|_| rusb::Error::Other)?;
+			bincode::serialize(&data).map_err(|_| BridgeError::WriteError)?;
 
-		self.handle().map_err(|_| rusb::Error::Other)?.write_bulk(
-			self.endpoint_out.address,
-			&serialized,
-			Self::TIMEOUT,
-		)?;
+		self.handle()
+			.map_err(BridgeError::from)?
+			.write_bulk(self.endpoint_out.address, &serialized, Self::TIMEOUT)
+			.map_err(BridgeError::from)?;
 
 		Ok(())
 	}
 
 	/// Reads and deserializes a [`Message`] from the device’s IN endpoint.
-	pub fn recieve(&self) -> Result<Message, rusb::Error> {
+	pub fn recieve(&self) -> Result<Message> {
 		let mut buffer = [0u8; 1024];
 
-		let size = self.handle().map_err(|_| rusb::Error::Other)?.read_bulk(
-			self.endpoint_in.address,
-			&mut buffer,
-			Self::TIMEOUT,
-		)?;
+		let size = self
+			.handle()
+			.map_err(BridgeError::from)?
+			.read_bulk(self.endpoint_in.address, &mut buffer, Self::TIMEOUT)
+			.map_err(BridgeError::from)?;
 
-		bincode::deserialize(&buffer[..size]).map_err(|_| rusb::Error::Other)
+		bincode::deserialize(&buffer[..size])
+			.map_err(|_| BridgeError::ReadError)
 	}
 
 	/// Sends an [`Action`] to the device over the OUT endpoint.
-	pub fn send_action(&self, action: Action) -> Result<(), rusb::Error> {
+	pub fn send_action(&self, action: Action) -> Result<()> {
 		self.send(action)
 	}
 
 	/// Sends a [`TaqpConfig`] to the device over the OUT endpoint.
-	pub fn send_config(&self, config: TaqpConfig) -> Result<(), rusb::Error> {
+	pub fn send_config(&self, config: TaqpConfig) -> Result<()> {
 		self.send(config)
 	}
 
-	pub fn handle(&self) -> Result<&DeviceHandle<Context>, i32> {
+	pub fn handle(&self) -> Result<&DeviceHandle<Context>> {
 		ptr::cast_ptr::<DeviceHandle<Context>>(self.handle_ptr)
+			.map_err(BridgeError::from)
 	}
 }
 
@@ -145,15 +154,15 @@ pub enum Action {
 }
 
 impl TryFrom<u8> for Action {
-	type Error = i32;
+	type Error = BridgeError;
 
-	fn try_from(value: u8) -> Result<Self, Self::Error> {
+	fn try_from(value: u8) -> std::result::Result<Self, Self::Error> {
 		match value {
 			x if x == Self::MuteVolume as u8 => Ok(Self::MuteVolume),
 			x if x == Self::IncreaseVolume as u8 => Ok(Self::IncreaseVolume),
 			x if x == Self::DecreaseVolume as u8 => Ok(Self::DecreaseVolume),
 			x if x == Self::Ignore as u8 => Ok(Self::Ignore),
-			_ => Err(-2),
+			_ => Err(BridgeError::FormatMissmatch),
 		}
 	}
 }

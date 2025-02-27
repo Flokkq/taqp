@@ -1,5 +1,6 @@
 use crate::usb::{Action, Message, TaqpConfig};
 
+#[repr(u8)]
 pub enum MessageTag {
 	ExecuteAction = 1,
 	Config = 2,

@@ -14,7 +14,19 @@ pub const UsbError = error{
     ConnectionLost,
     InvalidInput,
     ActionError,
+    Unknown,
 };
+
+fn bridgeErrorToUsbError(err: bindings.BridgeError) UsbError {
+    return switch (err) {
+        0 => unreachable,
+        bindings.BRIDGE_ERROR_CONNECTION => UsbError.ConnectionLost,
+        bindings.BRIDGE_ERROR_READ_ERROR => UsbError.ReadFailure,
+        bindings.BRIDGE_ERROR_WRITE_ERROR => UsbError.SendFailure,
+        bindings.BRIDGE_ERROR_FORMAT_MISSMATCH => UsbError.InvalidInput,
+        else => UsbError.Unknown,
+    };
+}
 
 pub fn connectToDevice(vendor_id: u16, product_id: u16) UsbError!*bindings.UsbDevice {
     const device = bindings.connect(vendor_id, product_id) orelse {
@@ -31,7 +43,7 @@ pub fn sendToDevice(device: *bindings.UsbDevice, axn: Action) UsbError!void {
 
     if (result < 0) {
         std.log.err("Failed sending action to device: ", .{axn});
-        return UsbError.SendFailure;
+        return bridgeErrorToUsbError(result);
     }
 
     std.log.info("Sent action {} to device successfully", .{axn});

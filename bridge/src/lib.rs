@@ -1,5 +1,5 @@
 mod bindings;
-mod ffi;
+mod error;
 mod ptr;
 mod usb;
 
@@ -33,8 +33,7 @@ pub extern "C" fn send_to_device(device: *mut UsbDevice, action: u8) -> i32 {
 
 	match device.send_action(action) {
 		Ok(_) => 0,
-		// TODO: proper error handlling
-		Err(_) => -3,
+		Err(err) => err.into(),
 	}
 }
 
