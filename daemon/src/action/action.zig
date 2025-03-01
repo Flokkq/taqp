@@ -16,10 +16,16 @@ pub const Action = enum(u8) {
     MuteVolume,
     IncreaseVolume,
     DecreaseVolume,
+    Discord,
 
     pub fn from_int(val: u8) ?Action {
         return std.meta.intToEnum(@This(), val) catch null;
     }
 };
 
-pub const ActionError = error{VolumeChangeError};
+pub const ActionError = error{
+    VolumeChangeError,
+    DiscordConnectionErrror,
+    NoAvailableSocket,
+    ResourceLimitReached,
+};

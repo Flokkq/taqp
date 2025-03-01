@@ -10,20 +10,29 @@ fn getEnvVar(allocator: Allocator, key: []const u8) ?[]const u8 {
     return std.process.getEnvVarOwned(allocator, key) catch null;
 }
 
+fn getSocketDir(allocator: Allocator) []const u8 {
+    switch (os.current_os) {
+        .Macos, .Posix => {
+            return getEnvVar(allocator, "XDG_RUNTIME_DIR") orelse
+                getEnvVar(allocator, "TMPDIR") orelse
+                getEnvVar(allocator, "TEMP") orelse
+                getEnvVar(allocator, "TMP") orelse
+                "/tmp";
+        },
+        .Windows => {
+            return "\\\\?\\pipe\\";
+        },
+    }
+}
+
 pub fn connectToClient() action.ActionError!void {
     const allocator = std.heap.page_allocator;
-
-    const socket_dir = getEnvVar(allocator, "XDG_RUNTIME_DIR") orelse
-        getEnvVar(allocator, "TMPDIR") orelse
-        getEnvVar(allocator, "TEMP") orelse
-        getEnvVar(allocator, "TMP") orelse
-        "/tmp";
+    const socket_dir = getSocketDir(allocator);
 
     defer if (!std.mem.eql(u8, socket_dir, "/tmp")) allocator.free(socket_dir);
 
     var client_socket_fd: posix.fd_t = -1;
     var found = false;
-
     for (0..10) |i| {
         const socket_path = std.fmt.allocPrint(allocator, "{s}/discord-ipc-{d}", .{ socket_dir, i }) catch {
             return action.ActionError.ResourceLimitReached;
@@ -48,5 +57,7 @@ pub fn connectToClient() action.ActionError!void {
     if (!found) {
         return action.ActionError.NoAvailableSocket;
     }
+
+    // TODO: talk to discord
 }
 
