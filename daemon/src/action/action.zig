@@ -1,12 +1,14 @@
 const std = @import("std");
 
-pub const os = @import("os/os.zig").os;
+const os = @import("os/os.zig").os;
+const discord = @import("discord.zig");
 
 pub fn execute(action: Action) ActionError!void {
     try switch (action) {
         .IncreaseVolume => os.volume.increaseVolume(),
         .DecreaseVolume => os.volume.decreaseVolume(),
         .MuteVolume => os.volume.muteVolumne(),
+        .Discord => discord.connectToClient(),
     };
 }
 

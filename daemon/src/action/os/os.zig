@@ -1,9 +1,8 @@
-const builtin = @import("builtin");
+const current_os = @import("../../os.zig").current_os;
 
 pub const os =
-    switch (builtin.os.tag) {
-    .windows => @import("windows/windows.zig"),
-    .macos => @import("darwin/darwin.zig"),
-    .linux, .freebsd, .openbsd => @import("posix/posix.zig"),
-    else => @compileError("Unsupported OS"),
+    switch (current_os) {
+    .Windows => @import("windows/windows.zig"),
+    .Macos => @import("darwin/darwin.zig"),
+    .Posix => @import("posix/posix.zig"),
 };
